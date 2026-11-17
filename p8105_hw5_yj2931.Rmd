@@ -1,0 +1,59 @@
+---
+title: "p8105_hw5_yj2931"
+author: "Yuyao"
+date: "2026-11-17"
+output: github_document
+---
+
+```{r include=FALSE}
+library(tidyverse)
+```
+## Problem 1
+
+Write the birthday simulation function
+
+```{r}
+birthday_repeated = function(n_room) {
+  
+  birthdays = sample(1:365, size = n_room, replace = TRUE)
+  
+  repeated_birthdays = length(unique(birthdays)) < n_room
+  
+  return(repeated_birthdays)
+  
+}
+```
+
+Run this function 10000 times for each group size between 2 and 50
+
+```{r}
+birthday_results_df =
+  expand_grid(
+    number_of_people = 2:50,
+    iter = 1:10000
+  ) |> 
+  mutate(
+    repeated = map_lgl(number_of_people, birthday_repeated)
+  )
+```
+
+Make a plot to show the results
+
+```{r}
+birthday_results_df |> 
+  group_by(number_of_people) |> 
+  summarize(prob_of_repeat = mean(repeated)) |> 
+  ggplot(aes(x = number_of_people, y = prob_of_repeat)) + 
+  geom_point() + 
+  geom_line() +
+  labs(
+    title = "Probability of a Shared Birthday by Group Size",
+    x = "Number of People",
+    y = "Probability of a Shared Birthday"
+  ) +
+  theme_minimal()
+```
+
+The probability that at least two people share a birthday increases as the number of people in the group increases. The probability reaches about 50% with around 23 people and continues to increase quickly, reaching almost 100% when the group size approaches 50.
+
+
