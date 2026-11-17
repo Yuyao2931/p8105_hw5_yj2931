@@ -7,7 +7,9 @@ output: github_document
 
 ```{r include=FALSE}
 library(tidyverse)
+library(readr)
 ```
+
 ## Problem 1
 
 Write the birthday simulation function
@@ -55,5 +57,71 @@ birthday_results_df |>
 ```
 
 The probability that at least two people share a birthday increases as the number of people in the group increases. The probability reaches about 50% with around 23 people and continues to increase quickly, reaching almost 100% when the group size approaches 50.
+
+## Problem 2
+
+Use a function to import the datasets because we have to do this multiple times.
+
+```{r}
+import_ds = function(file) {
+  
+  read_csv(file, show_col_types = FALSE)
+  
+}
+```
+
+First create a dataframe of all file names, then use `map()` to organize it a little bit
+```{r}
+study_files = 
+  tibble(
+    file = list.files("data", full.names = TRUE)
+  )
+
+study_data = 
+  study_files |>
+  mutate(
+    data = map(file, import_ds)
+  )
+```
+
+Tidy the dataset...
+
+```{r}
+tidy_study_data =
+  study_data |>
+  unnest(data) |>
+  mutate(
+    file = str_replace(file, ".csv", ""),
+    arm = str_sub(file, 6, 8),
+    subject = str_sub(file, 6, 11)
+  ) |>
+  pivot_longer(
+    week_1:week_8,
+    names_to = "week",
+    values_to = "observation",
+    names_prefix = "week_"
+  ) |>
+  mutate(
+    week = as.numeric(week)
+  ) |>
+  select(arm, subject, week, observation)
+```
+
+Make a spaghetti plot to show the results
+
+```{r}
+tidy_study_data |>
+  ggplot(aes(x = week, y = observation, group = subject, color = arm)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Observations Over Time by Study Arm",
+    x = "Week",
+    y = "Observation",
+    color = "Study Arm"
+  ) +
+  theme_minimal()
+```
+The experimental group generally shows an increasing trend in observations over time, while the control group remains relatively stable with more fluctuation around lower values. The difference between the two groups becomes more noticeable in the later weeks.
 
 
