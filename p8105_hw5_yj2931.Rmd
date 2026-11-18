@@ -124,4 +124,179 @@ tidy_study_data |>
 ```
 The experimental group generally shows an increasing trend in observations over time, while the control group remains relatively stable with more fluctuation around lower values. The difference between the two groups becomes more noticeable in the later weeks.
 
+## Problem 3
+
+Write a function for mu, n and sd are fixed
+
+```{r}
+sim_data = function(mu) {
+  
+  rnorm(n = 30, mean = mu, sd = 5)
+  
+}
+```
+
+Generate 5000 datasets from the model
+
+```{r}
+sim_results =
+  tibble(
+    iter = 1:5000
+  ) |>
+  mutate(
+    data = map(iter, ~ sim_data(0))
+  )
+```
+
+Use `t.test()` on each simulated dataset, clean the output with `broom::tidy()`, then keep the estimate and p-value
+
+Make it as a function
+
+```{r}
+sim_mu = function(mu) {
+  
+  sim_results =
+    tibble(iter = 1:5000) |>
+    mutate(
+      data = map(
+        iter,
+        ~ rnorm(n = 30, mean = mu, sd = 5)
+      ),
+      test_results = map(
+        data,
+        ~ t.test(.x, mu = 0) |>
+          broom::tidy()
+      )
+    ) |>
+    unnest(test_results) |>
+    select(iter, estimate, p.value)
+  
+  return(sim_results)
+}
+```
+
+Generate from mu = 0 to mu = 6
+
+```{r}
+sim_results_mu0 = sim_mu(0)
+```
+
+Repeat the above for 𝜇={1,2,3,4,5,6}
+
+```{r}
+sim_results_mu1 = sim_mu(1)
+sim_results_mu2 = sim_mu(2)
+sim_results_mu3 = sim_mu(3)
+sim_results_mu4 = sim_mu(4)
+sim_results_mu5 = sim_mu(5)
+sim_results_mu6 = sim_mu(6)
+```
+
+*I decided to run them seperately since the datasets were relatively large
+
+Put them all together as a dataset
+
+```{r}
+sim_results_all =
+  bind_rows(
+    "0" = sim_results_mu0,
+    "1" = sim_results_mu1,
+    "2" = sim_results_mu2,
+    "3" = sim_results_mu3,
+    "4" = sim_results_mu4,
+    "5" = sim_results_mu5,
+    "6" = sim_results_mu6,
+    .id = "mu"
+  ) |>
+  mutate(
+    mu = as.numeric(mu)
+  )
+```
+
+Select those with a p-value < 0.05
+
+```{r}
+power_df =
+  sim_results_all |>
+  group_by(mu) |>
+  summarize(
+    power = mean(p.value < 0.05)
+  )
+```
+
+Make the plot. Some p-values are close to 1, so I decided to print them out on the plot.
+
+```{r}
+power_df |>
+  ggplot(aes(x = mu, y = power)) +
+  geom_point() +
+  geom_line() +
+  geom_text(
+    aes(label = round(power, 3)),
+    vjust = -0.7
+  ) +
+  labs(
+    title = "Power of the One-Sample t-Test",
+    x = "True Value of Mu",
+    y = "Power / Proportion of times H0 was rejected"
+  ) +
+  ylim(0, 1.05) +
+  theme_minimal()
+```
+
+As the true value of μ increases, the power of the test also increases. When μ is close to 0, the effect size is small and the test is less likely to reject the null hypothesis. As μ moves farther from 0, the effect size becomes larger, making it easier to detect a difference and increasing the power.
+
+To make the second plot, I first summarized the mean estimate and rejected mean estimate
+
+```{r}
+estimate_df =
+  sim_results_all |>
+  group_by(mu) |>
+  summarize(
+    mean_estimate = mean(estimate),
+    mean_estimate_rejected = mean(estimate[p.value < 0.05])
+  )
+```
+
+Then plot the average estimate across all simulations:
+
+```{r}
+estimate_df |>
+  ggplot(aes(x = mu, y = mean_estimate)) +
+  geom_point() +
+  geom_line() +
+  geom_text(
+    aes(label = round(mean_estimate, 2)),
+    vjust = -0.7
+  ) +
+  labs(
+    title = "Average Estimated Mu Across All Simulations",
+    x = "True Value of Mu",
+    y = "Average Estimated Mu"
+  ) +
+  theme_minimal()
+```
+
+And separately plot the average estimate only when the null was rejected:
+
+```{r}
+estimate_df |>
+  ggplot(aes(x = mu, y = mean_estimate_rejected)) +
+  geom_point() +
+  geom_line() +
+  geom_text(
+    aes(label = round(mean_estimate_rejected, 2)),
+    vjust = -0.7
+  ) +
+  labs(
+    title = "Average Estimated Mu When the Null Was Rejected",
+    x = "True Value of Mu",
+    y = "Average Estimated Mu"
+  ) +
+  theme_minimal()
+```
+
+
+
+
 
