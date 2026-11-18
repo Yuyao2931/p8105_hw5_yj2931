@@ -296,6 +296,7 @@ estimate_df |>
   theme_minimal()
 ```
 
+The average estimate of \(\hat{\mu}\) among samples in which the null hypothesis was rejected is not always approximately equal to the true value of \(\mu\). When the true \(\mu\) is small, only samples with relatively large estimated effects are likely to reject the null, so the average \(\hat{\mu}\) among rejected tests tends to be larger than the true value. As \(\mu\) increases and the power approaches 1, most samples reject the null, so the average estimate becomes closer to the true \(\mu\).
 
 
 
